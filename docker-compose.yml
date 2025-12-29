@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+  fastapi_app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - redis
+      - chromadb
+  celery_worker:
+    build: .
+    command: celery -A worker.celery_app worker --loglevel=info
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - redis
+      - chromadb
+  chromadb:
+    image: ghcr.io/chroma-core/chroma:latest
+    volumes:
+      - chromadb_data:/app/chroma
+    ports:
+      - "8001:8000" # Expose for direct access if needed, Chroma uses 8000 internally
+volumes:
+  chromadb_data:
